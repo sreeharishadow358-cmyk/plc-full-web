@@ -1,7 +1,7 @@
 'use client';
 
-import IDELayout from "@/layout/IDELayout_Professional";
+import IDELayout_Builder from "@/layout/IDELayout_Builder";
 
 export default function Home() {
-  return <IDELayout />;
+  return <IDELayout_Builder />;
 }
