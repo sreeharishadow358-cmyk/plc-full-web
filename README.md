@@ -21,52 +21,9 @@ This application is a **development environment for PLC programmers** that:
 - 🔒 **Enterprise-grade security** with rate limiting and input validation
 - ⚡ **Fast responses** with 30s timeout optimization for AI calls
 
-## 📋 Prerequisites
 
-- **Node.js 18+** (verify with `node --version`)
-- **npm or yarn** package manager
-- **Groq API account** (free tier available)
-  - Sign up at [https://console.groq.com](https://console.groq.com)
-  - Create an API key in the [Keys section](https://console.groq.com/keys)
-  - Free tier includes 7,000 requests per month
 
-## ⚙️ Environment Setup
 
-### Step 1: Clone & Install
-
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd plc-frontend
-
-# Install dependencies (required packages listed in package.json)
-npm install
-```
-
-### Step 2: Configure API Keys
-
-Create a `.env.local` file in the project root:
-
-```bash
-# For macOS/Linux:
-touch .env.local
-
-# For Windows (PowerShell):
-New-Item -Path ".env.local" -ItemType File
-```
-
-Add these variables:
-
-```env
-# REQUIRED: Your Groq API key from https://console.groq.com/keys
-GROQ_API_KEY=your_groq_api_key_here
-
-# OPTIONAL: Additional security settings
-NEXT_PUBLIC_API_SECRET=your_secret_key_here
-API_RATE_LIMIT=10
-API_RATE_WINDOW_MS=60000
-NODE_ENV=development
-```
 
 **⚠️ Security Note:** `.env.local` is in `.gitignore` — never commit API keys to git.
 
@@ -81,7 +38,6 @@ npm run dev
 # Ready in X.XXXs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and test the AI input field.
 
 ## 🔐 API Security & Architecture
 
