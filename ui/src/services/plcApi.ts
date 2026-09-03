@@ -1,17 +1,19 @@
 import { parseIntent, ParsedIntent } from '../../../ai/src/services/intentParser';
-import { generateLogic, LogicGenerationResult as AILogicGenerationResult } from '../../../ai/src/services/logicGenerator';
+import { generateLogic } from '../../../ai/src/services/logicGenerator';
 
 export interface LogicGenerationResult {
-  ladder: Array<{ type: 'contact' | 'contact_nc' | 'coil'; label: string }>;
-  program: any;
+  status?: 'needs_clarification';
+  questions?: string[];
+  ladder?: Array<{ type: 'contact' | 'contact_nc' | 'coil'; label: string }>;
+  program?: any;
   explanation: string;
   instructionList: string;
   warnings: string[];
 }
 
 /**
- * End-to-end PLC logic generation service.
- * Flow: User NL prompt → parseIntent() → structured intent object → generateLogic() → ladder JSON
+ * End-to-end PLC logic generation service using IR Compiler architecture.
+ * Flow: User NL prompt → parseIntent() → buildRungSchema() → compileRungs() → Ladder JSON
  */
 export const generatePlcLogic = async (input: string): Promise<LogicGenerationResult> => {
   const trimmed = input.trim();
@@ -19,14 +21,21 @@ export const generatePlcLogic = async (input: string): Promise<LogicGenerationRe
     throw new Error('Input instruction cannot be empty.');
   }
 
-  // Artificial short realistic delay for IDE experience
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  // Step 1: User NL prompt → parseIntent() → structured intent object
   const intent: ParsedIntent = parseIntent(trimmed);
+  const aiResult = generateLogic(intent);
 
-  // Step 2: structured intent object → generateLogic() → ladder JSON
-  const aiResult: AILogicGenerationResult = generateLogic(intent);
+  if ('status' in aiResult && aiResult.status === 'needs_clarification') {
+    return {
+      status: 'needs_clarification',
+      questions: aiResult.questions,
+      explanation: `### Clarification Required\n\nThe provided instruction "${trimmed}" is ambiguous. Please specify the following details:\n\n` +
+        aiResult.questions.map((q) => `- ${q}`).join('\n'),
+      instructionList: '; Clarification required before compilation.\n; No ladder produced.',
+      warnings: ['Specification incomplete. Enter exact I/O addresses to proceed.'],
+    };
+  }
 
   return {
     ladder: aiResult.ladder,

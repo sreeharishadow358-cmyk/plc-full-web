@@ -103,9 +103,3 @@ export interface ClarificationResult {
   questions: string[];
   providedPrompt: string;
 }
-
-export interface GenerationRejectedResult {
-  status: 'generation_rejected';
-  reasons: string[];
-  providedPrompt: string;
-}

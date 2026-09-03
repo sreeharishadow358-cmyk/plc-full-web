@@ -15,7 +15,11 @@ export const useGenerateLogic = () => {
       }
     },
     onSuccess: (data) => {
-      setProgram(data.program, true);
+      if (data.status === 'needs_clarification') {
+        setProgram({ title: 'Clarification Needed - No Ladder Generated', rungs: [] }, false);
+      } else if (data.program) {
+        setProgram(data.program, true);
+      }
       setExplanation(data.explanation);
     },
     onError: (error) => {
