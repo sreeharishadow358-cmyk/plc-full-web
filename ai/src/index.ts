@@ -1,23 +1,7 @@
-export {
-  generateEmbedding,
-  loadVectorDatabase,
-  saveVectorDatabase,
-  clearVectorDatabase,
-  getVectorDatabaseStats,
-  searchSimilarEmbeddings,
-  cosineSimilarity,
-} from './services/embeddingService.js';
-export {
-  processPDFs,
-  loadPDFFiles,
-  extractTextFromPDF,
-  splitTextIntoChunks,
-} from './services/pdfProcessor.js';
-export {
-  retrieveContext,
-  constructRAGPrompt,
-  isRAGInitialized,
-  getRAGStats,
-} from './services/ragService.js';
-export { validateAIResponse } from './services/responseValidator.js';
-export type { ValidationResult as AIValidationResult } from './services/responseValidator.js';
+export { parseIntent } from './services/intentParser';
+export { generateLogic } from './services/logicGenerator';
+export { buildRungSchema } from './services/schemaBuilder';
+export { compileRungs } from './services/compiler';
+export { detectContradictions } from './services/contradictionDetector';
+export { simulatePlcProgram } from './services/simulator';
+export * from './types/ir';

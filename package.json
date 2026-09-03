@@ -1,28 +1,14 @@
 {
-  "name": "plc-frontend-monorepo",
+  "name": "plc-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": ["ui", "backend", "ai"],
   "scripts": {
-    "dev:ui": "npm --workspace ui run dev",
-    "dev:backend": "npm --workspace backend run dev",
-    "dev:ai": "npm --workspace ai run dev",
-    "dev": "node scripts/workspaceRunner.js dev",
-    "build:ui": "npm --workspace ui run build",
-    "build:backend": "npm --workspace backend run build",
-    "build:ai": "npm --workspace ai run build",
-    "build": "npm run build:ai && npm run build:backend && npm run build:ui",
-    "start": "node scripts/workspaceRunner.js start",
-    "lint": "npm --workspace ui run lint",
-    "rag:init": "node --import tsx scripts/initializeRAG.js",
-    "rag:init:mock": "node --import tsx scripts/initializeRAGMock.js",
-    "rag:clear": "node --import tsx scripts/clearRAG.js",
-    "rag:diag": "node --import tsx scripts/diagnostics.js",
-    "rag:test": "node --import tsx scripts/testPipeline.js",
-    "fix-dev": "fix-dev.bat"
-  },
-  "devDependencies": {
-    "typescript": "^5"
+    "dev": "npm --prefix ui run dev",
+    "build": "npm --prefix ui run build",
+    "start": "npm --prefix ui run start",
+    "test": "node scripts/testPipeline.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ui/tsconfig.json",
+    "lint": "npm --prefix ui run lint"
   }
 }

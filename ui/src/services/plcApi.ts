@@ -1,29 +1,60 @@
-import axios from 'axios';
-import type { LadderProject } from '@/types/ladder';
-
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:4000';
-const API_URL = API_BASE_URL ? `${API_BASE_URL}/api/generate-logic` : '/api/generate-logic';
+import { parseIntent, ParsedIntent } from '../../../ai/src/services/intentParser';
+import { generateLogic } from '../../../ai/src/services/logicGenerator';
 
 export interface LogicGenerationResult {
-    project: LadderProject;
-    explanation: string;
-    instructionList: string;
-    metadata: {
-        ragStatus: "active" | "not_initialized" | "no_results";
-        sourceDocuments: string[];
-    };
+  status?: 'needs_clarification' | 'generation_rejected';
+  questions?: string[];
+  reasons?: string[];
+  ladder?: Array<{ type: 'contact' | 'contact_nc' | 'coil'; label: string }>;
+  program?: any;
+  explanation: string;
+  instructionList: string;
+  warnings: string[];
 }
 
-export const generateLogic = async (input: string): Promise<LogicGenerationResult> => {
-    const response = await axios.post<LogicGenerationResult>(
-        API_URL,
-        { input },
-        {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 30000,
-        }
-    );
+/**
+ * End-to-end PLC logic generation service using IR Compiler & Contradiction Detection architecture.
+ * Flow: User NL prompt → parseIntent() → detectContradictions() → buildRungSchema() → compileRungs() → Ladder JSON
+ */
+export const generatePlcLogic = async (input: string): Promise<LogicGenerationResult> => {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error('Input instruction cannot be empty.');
+  }
 
-    return response.data;
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  const intent: ParsedIntent = parseIntent(trimmed);
+  const aiResult = generateLogic(intent);
+
+  if ('status' in aiResult && aiResult.status === 'generation_rejected') {
+    return {
+      status: 'generation_rejected',
+      reasons: aiResult.reasons,
+      explanation: `### Generation Rejected (Contradiction Detected)\n\nThe requested PLC logic contains safety or operational contradictions:\n\n` +
+        aiResult.reasons.map((r) => `- ❌ ${r}`).join('\n') +
+        `\n\nCompilation aborted to protect equipment and operator safety.`,
+      instructionList: '; Compilation rejected due to detected contradiction.\n; No ladder produced.',
+      warnings: aiResult.reasons,
+    };
+  }
+
+  if ('status' in aiResult && aiResult.status === 'needs_clarification') {
+    return {
+      status: 'needs_clarification',
+      questions: aiResult.questions,
+      explanation: `### Clarification Required\n\nThe provided instruction "${trimmed}" is ambiguous. Please specify the following details:\n\n` +
+        aiResult.questions.map((q) => `- ${q}`).join('\n'),
+      instructionList: '; Clarification required before compilation.\n; No ladder produced.',
+      warnings: ['Specification incomplete. Enter exact I/O addresses to proceed.'],
+    };
+  }
+
+  return {
+    ladder: aiResult.ladder,
+    program: aiResult.program,
+    explanation: aiResult.explanation,
+    instructionList: aiResult.instructionList,
+    warnings: aiResult.warnings,
+  };
 };
