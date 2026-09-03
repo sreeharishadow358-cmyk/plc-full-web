@@ -1,0 +1,251 @@
+{
+  "schema_version": "1.0.0",
+  "project": "Mitsubishi PLC IDE",
+  "description": "This JSON defines the full data contract between the frontend (Next.js) and the backend (AI logic generator). The frontend sends a plain-English automation instruction, and the backend must return a structured response matching this schema exactly. This file also serves as the reference guide for all supported ladder logic block types, instruction list syntax, and example scenarios.",
+
+  "api_contract": {
+    "endpoint": "POST /api/generate-logic",
+    "description": "Accepts a natural language automation instruction and returns ladder logic blocks, an AI explanation, and a Mitsubishi-compatible instruction list.",
+    "request": {
+      "content_type": "application/json",
+      "body": {
+        "input": {
+          "type": "string",
+          "required": true,
+          "description": "Plain-English description of the desired automation logic.",
+          "example": "Start motor when X0 is pressed, stop when X1 is pressed, and X2 acts as emergency stop."
+        }
+      }
+    },
+    "response": {
+      "content_type": "application/json",
+      "body": {
+        "ladder": {
+          "type": "array",
+          "description": "Ordered list of ladder logic blocks forming a single rung. The frontend renders these left to right. Contacts come first, coil comes last.",
+          "items": {
+            "$ref": "#/ladder_block_schema"
+          }
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Human-readable AI explanation of what the ladder rung does. Rendered in the right-side Explanation Panel. Use newlines (\\n) and bullet points for readability.",
+          "example": "Based on the input logic description:\n- X0 acts as the start contact (normally open).\n- X2 acts as an emergency stop (normally closed).\n- Y0 is the output coil representing the activated motor.\n\n⚠️ Ensure Emergency Stop is also hardwired for safety redundancy."
+        },
+        "instructionList": {
+          "type": "string",
+          "description": "Mitsubishi GX Works-compatible instruction list. Each instruction on its own line. Rendered in the Output Console. User can copy or export this directly to program their PLC.",
+          "example": "LD X0\nANDN X2\nOUT Y0"
+        }
+      }
+    }
+  },
+
+  "ladder_block_schema": {
+    "type": "object",
+    "description": "Represents a single element (contact or coil) on a ladder rung.",
+    "properties": {
+      "type": {
+        "type": "string",
+        "enum": ["contact", "contact_nc", "coil"],
+        "description": "The type of ladder block. See ladder_block_types for full details on each."
+      },
+      "label": {
+        "type": "string",
+        "description": "The PLC address label for this block. For Mitsubishi: inputs are X0-XFF, outputs are Y0-YFF, internal relays are M0-M9999, timers are T0-T255.",
+        "examples": ["X0", "X1", "X2", "Y0", "Y1", "M0", "T0"]
+      }
+    },
+    "required": ["type", "label"]
+  },
+
+  "ladder_block_types": {
+    "contact": {
+      "name": "Normally Open Contact (NO)",
+      "symbol": "-| |-",
+      "mitsubishi_instruction": "LD (Load) or AND",
+      "description": "Passes current when the associated bit is ON (1). Think of it as a push button that is open by default and closes when activated.",
+      "use_cases": [
+        "Start buttons (momentary push)",
+        "Sensor triggers (photoelectric, proximity)",
+        "Interlock conditions that must be TRUE to proceed"
+      ],
+      "example": {
+        "label": "X0",
+        "type": "contact",
+        "meaning": "X0 input must be ON for current to flow through this contact"
+      },
+      "instruction_list_syntax": {
+        "first_in_rung": "LD X0",
+        "series_condition": "AND X0",
+        "parallel_condition": "OR X0"
+      }
+    },
+
+    "contact_nc": {
+      "name": "Normally Closed Contact (NC)",
+      "symbol": "-|/|-",
+      "mitsubishi_instruction": "LDI (Load Inverse) or ANDN / ANI",
+      "description": "Passes current when the associated bit is OFF (0). Think of it as a safety guard that is closed by default and opens when activated. Critical for emergency stops and safety interlocks.",
+      "use_cases": [
+        "Emergency stop buttons (must be closed for machine to run)",
+        "Overload relays (trip opens the contact)",
+        "Safety gate or door interlock switches",
+        "Fault conditions that block operation when true"
+      ],
+      "example": {
+        "label": "X2",
+        "type": "contact_nc",
+        "meaning": "X2 input must be OFF for current to flow — if X2 activates (e.g. E-Stop pressed), current is blocked and output turns off"
+      },
+      "instruction_list_syntax": {
+        "first_in_rung": "LDI X2",
+        "series_condition": "ANI X2",
+        "parallel_condition": "ORI X2"
+      },
+      "safety_note": "⚠️ Emergency stops should always be NC contacts in ladder logic AND hardwired in the physical panel for redundant safety."
+    },
+
+    "coil": {
+      "name": "Output Coil",
+      "symbol": "-( )-",
+      "mitsubishi_instruction": "OUT",
+      "description": "The output of a rung. Energizes (turns ON) when all conditions to its left allow current to flow. Represents a physical output (motor, valve, lamp) or an internal relay.",
+      "use_cases": [
+        "Motor starters (Y0, Y1...)",
+        "Solenoid valves",
+        "Indicator lamps",
+        "Internal relay flags (M coils) for complex logic"
+      ],
+      "example": {
+        "label": "Y0",
+        "type": "coil",
+        "meaning": "Y0 output turns ON when all preceding contacts allow current to flow through the rung"
+      },
+      "instruction_list_syntax": {
+        "output": "OUT Y0"
+      },
+      "important_rules": [
+        "Only one coil per rung (for simple logic). Use SET/RST for latching.",
+        "Coil must always be the LAST element in the ladder block array.",
+        "Do not use the same output coil (Y address) in more than one rung — this causes double-coil issues."
+      ]
+    }
+  },
+
+  "mitsubishi_address_reference": {
+    "description": "Standard Mitsubishi FX/Q-series PLC address ranges used for block labels.",
+    "addresses": {
+      "X": {
+        "name": "Input Relay",
+        "range": "X0 – X377 (octal)",
+        "description": "Physical input points. Connected to sensors, buttons, switches.",
+        "read_only": true
+      },
+      "Y": {
+        "name": "Output Relay",
+        "range": "Y0 – Y377 (octal)",
+        "description": "Physical output points. Connected to motors, valves, lamps.",
+        "read_only": false
+      },
+      "M": {
+        "name": "Internal Relay (Auxiliary Relay)",
+        "range": "M0 – M9999",
+        "description": "Software-only relay bits. Used for intermediate logic, flags, and latching conditions. Not physically connected.",
+        "read_only": false
+      },
+      "T": {
+        "name": "Timer",
+        "range": "T0 – T255",
+        "description": "On-delay timers. T0–T199 are 100ms resolution, T200–T255 are 10ms resolution.",
+        "read_only": false
+      },
+      "C": {
+        "name": "Counter",
+        "range": "C0 – C255",
+        "description": "Up counters (C0–C199) and up/down counters (C200–C255).",
+        "read_only": false
+      }
+    }
+  },
+
+  "rung_construction_rules": {
+    "description": "Rules the backend must follow when constructing the ladder array. The frontend renders the array as a single horizontal rung from left to right.",
+    "rules": [
+      "The ladder array must have at least 2 elements: one or more contacts, and exactly one coil.",
+      "Contacts must appear BEFORE the coil. The coil is always the last element.",
+      "For serial (AND) logic: add multiple contacts in sequence before the coil.",
+      "For parallel (OR) logic: this single-rung schema does not support branching visually — keep to series logic per rung. Complex parallel logic should use multiple rungs with M (internal relay) coils.",
+      "Labels must use valid Mitsubishi addresses (X, Y, M, T, C prefix).",
+      "Do not repeat the same output label (Y or M) across multiple rungs unless using SET/RST pattern."
+    ]
+  },
+
+  "instruction_list_syntax_guide": {
+    "description": "How to construct the instructionList string. It must be Mitsubishi GX Works-compatible mnemonic code.",
+    "format": "One instruction per line, uppercase, address immediately after instruction with a space.",
+    "common_instructions": {
+      "LD": "Load — starts a new rung with a NO contact. Usage: LD X0",
+      "LDI": "Load Inverse — starts a new rung with a NC contact. Usage: LDI X2",
+      "AND": "AND — serial NO contact. Usage: AND X1",
+      "ANI": "AND Inverse — serial NC contact. Usage: ANI X2",
+      "OR": "OR — parallel NO contact. Usage: OR M0",
+      "ORI": "OR Inverse — parallel NC contact. Usage: ORI M1",
+      "OUT": "Output — energizes a coil. Usage: OUT Y0",
+      "SET": "Latch ON — keeps coil ON even after trigger released. Usage: SET M0",
+      "RST": "Reset — turns OFF a latched coil. Usage: RST M0",
+      "END": "End of program. Always the last instruction."
+    },
+    "example_complete_program": "LD X0\nANI X2\nOUT Y0\nEND"
+  },
+
+  "example_scenarios": [
+    {
+      "scenario": "Simple Motor Start/Stop",
+      "input": "Start motor when X0 is pressed. Stop when X1 is pressed. X2 is emergency stop.",
+      "expected_response": {
+        "ladder": [
+          { "type": "contact", "label": "X0" },
+          { "type": "contact_nc", "label": "X1" },
+          { "type": "contact_nc", "label": "X2" },
+          { "type": "coil", "label": "Y0" }
+        ],
+        "explanation": "Basic motor start/stop with emergency stop:\n- X0 (NO) is the Start pushbutton.\n- X1 (NC) is the Stop pushbutton — breaks the circuit when pressed.\n- X2 (NC) is the Emergency Stop — highest priority safety interlock.\n- Y0 is the motor output contactor.\n\n⚠️ Add a Y0 seal-in contact in parallel with X0 for self-latching (memory) behavior.",
+        "instructionList": "LD X0\nANI X1\nANI X2\nOUT Y0\nEND"
+      }
+    },
+    {
+      "scenario": "Sensor Triggered Output",
+      "input": "Turn ON conveyor Y1 when proximity sensor X3 detects part, but only if safety gate X4 is closed.",
+      "expected_response": {
+        "ladder": [
+          { "type": "contact", "label": "X3" },
+          { "type": "contact_nc", "label": "X4" },
+          { "type": "coil", "label": "Y1" }
+        ],
+        "explanation": "Conveyor activation with gate interlock:\n- X3 (NO) is the proximity sensor — must detect a part to allow output.\n- X4 (NC) is the safety gate switch — must be closed (OFF signal) for operation. If gate opens, X4 energizes and breaks the rung.\n- Y1 is the conveyor drive output.",
+        "instructionList": "LD X3\nANI X4\nOUT Y1\nEND"
+      }
+    },
+    {
+      "scenario": "Single Contact Output",
+      "input": "Turn on indicator lamp Y0 when switch X0 is ON.",
+      "expected_response": {
+        "ladder": [
+          { "type": "contact", "label": "X0" },
+          { "type": "coil", "label": "Y0" }
+        ],
+        "explanation": "Simple on/off control:\n- X0 (NO) is the control switch.\n- Y0 is the indicator lamp output.\n\nWhen X0 turns ON, Y0 energizes immediately.",
+        "instructionList": "LD X0\nOUT Y0\nEND"
+      }
+    }
+  ],
+
+  "frontend_rendering_notes": {
+    "description": "How the frontend consumes this response — useful for the backend to understand visual output.",
+    "ladder_render": "The frontend (LadderPreview.tsx) renders all ladder[] blocks as a single horizontal rung on screen. contact = -| |-, contact_nc = -|/|-, coil = -( )-. The rung wire connects them left to right.",
+    "explanation_render": "The explanation string is rendered with whitespace: pre-wrap in the right panel. Use \\n for line breaks and bullet points starting with - for formatting.",
+    "instructionList_render": "Rendered in a monospace console at the bottom (OutputConsole.tsx). User can copy to clipboard or download as a .txt file for GX Works import.",
+    "state_management": "All three fields (ladder, explanation, instructionList) are stored in Zustand (plcStore.ts) and remain until the user clicks Clear or generates new logic."
+  }
+}

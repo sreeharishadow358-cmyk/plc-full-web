@@ -1,0 +1,22 @@
+# dependencies
+node_modules
+ui/node_modules
+backend/node_modules
+ai/node_modules
+
+# build outputs
+.next
+ui/.next
+dist
+build
+*.tsbuildinfo
+
+# vector DB & temporary logs
+.vector-cache
+*.log
+scratch/
+
+# OS / IDE
+.DS_Store
+.vscode
+.claude

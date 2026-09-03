@@ -1,0 +1,10 @@
+{
+  "name": "plc-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix ui run dev",
+    "build": "npm --prefix ui run build",
+    "start": "npm --prefix ui run start"
+  }
+}

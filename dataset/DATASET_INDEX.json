@@ -1,0 +1,132 @@
+{
+  "dataset_info": {
+    "name": "PLC Frontend Training Dataset",
+    "purpose": "RAG (Retrieval-Augmented Generation) knowledge base for industrial automation instructions and PLC programming",
+    "created": "2026-03-19",
+    "total_files": 9,
+    "format": "PDF",
+    "status": "ready_for_processing"
+  },
+  "files": [
+    {
+      "id": 1,
+      "filename": "pdf1.pdf",
+      "title": "Unknown",
+      "purpose": "Training material",
+      "estimated_topics": [],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 2,
+      "filename": "pdf2.pdf",
+      "title": "Unknown",
+      "purpose": "Training material",
+      "estimated_topics": [],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 3,
+      "filename": "pdf3.pdf",
+      "title": "Unknown",
+      "purpose": "Training material",
+      "estimated_topics": [],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 4,
+      "filename": "pdf4.pdf",
+      "title": "Unknown",
+      "purpose": "Training material",
+      "estimated_topics": [],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 5,
+      "filename": "pdf5.pdf",
+      "title": "Unknown",
+      "purpose": "Training material",
+      "estimated_topics": [],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 6,
+      "filename": "pdf6.pdf",
+      "title": "Unknown",
+      "purpose": "Training material",
+      "estimated_topics": [],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 7,
+      "filename": "pdf7 program.pdf",
+      "title": "PLC Programming Guide",
+      "purpose": "Programming instructions and examples",
+      "estimated_topics": [
+        "ladder_logic",
+        "instruction_list",
+        "program_structure"
+      ],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 8,
+      "filename": "pdf8 user manual.pdf",
+      "title": "PLC User Manual",
+      "purpose": "User manual and reference documentation",
+      "estimated_topics": [
+        "device_specifications",
+        "pin_configuration",
+        "timing_diagrams",
+        "error_codes"
+      ],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    },
+    {
+      "id": 9,
+      "filename": "pdf9 analog con.pdf",
+      "title": "Analog Control and Conversion",
+      "purpose": "Analog input/output control documentation",
+      "estimated_topics": [
+        "analog_conversion",
+        "sensor_calibration",
+        "signal_conditioning",
+        "analog_addresses"
+      ],
+      "processed": false,
+      "chunks_count": null,
+      "last_processed": null
+    }
+  ],
+  "processing_status": {
+    "rag_initialized": false,
+    "total_chunks": 0,
+    "vector_database_created": false,
+    "last_initialization": null,
+    "initialization_command": "npm run rag:init"
+  },
+  "usage": {
+    "service": "RAG (Retrieval-Augmented Generation)",
+    "endpoint": "POST /api/generate-logic",
+    "retrieval_method": "Vector similarity search",
+    "top_k_results": 4,
+    "embedding_model": "Xenova/all-MiniLM-L6-v2",
+    "vector_cache_location": ".vector-cache/"
+  },
+  "notes": "To process this dataset and initialize the RAG system, run: npm run rag:init. To see diagnostic information, run: npm run rag:diag"
+}

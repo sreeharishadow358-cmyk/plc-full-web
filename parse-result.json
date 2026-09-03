@@ -1,0 +1,1 @@
+﻿{"type":"motor_control","start":"X10","stop":"X11","emergency":"X12","output":"Y5","confidence":0.95,"matchedAddresses":["X10","X11","X12","Y5"],"defaultsApplied":[]}
