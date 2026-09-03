@@ -1,32 +1,31 @@
-import { useMutation } from '@tanstack/react-query';
-import { isAxiosError } from 'axios';
-import { generateLogic } from '../services/plcApi';
-import { usePlcStore } from '../store/plcStore';
+import { useMutation } from "@tanstack/react-query";
+import { generatePlcLogic } from "../services/plcApi";
+import { usePlcStore } from "../store/plcStore";
 
 export const useGenerateLogic = () => {
-    const { setLadderData, setExplanation, setInstructionList, setLoading, setErrorMessage } = usePlcStore();
+  const { setProgram, setExplanation, setIsGenerating } = usePlcStore();
 
-    return useMutation({
-        mutationFn: (input: string) => generateLogic(input),
-        onMutate: () => {
-            setLoading(true);
-            setErrorMessage('');
-        },
-        onSuccess: (data) => {
-            setLadderData(data.project.rungs);
-            setExplanation(data.explanation);
-            setInstructionList(data.instructionList);
-        },
-        onError: (error) => {
-            console.error('Logic Generation Failed:', error);
-            const msg =
-                isAxiosError(error) && typeof error.response?.data?.error === 'string'
-                    ? error.response.data.error
-                    : 'Logic generation failed. Please try again.';
-            setErrorMessage(msg);
-        },
-        onSettled: () => {
-            setLoading(false);
-        },
-    });
+  return useMutation({
+    mutationFn: async (input: string) => {
+      setIsGenerating(true);
+      try {
+        return await generatePlcLogic(input);
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    onSuccess: (data) => {
+      if (data.status === 'needs_clarification') {
+        setProgram({ title: 'Clarification Required - No Ladder Generated', rungs: [] }, false);
+      } else if (data.status === 'generation_rejected') {
+        setProgram({ title: 'Generation Rejected - Contradiction Detected', rungs: [] }, false);
+      } else if (data.program) {
+        setProgram(data.program, true);
+      }
+      setExplanation(data.explanation);
+    },
+    onError: (error) => {
+      console.error("Logic Generation Failed:", error);
+    },
+  });
 };

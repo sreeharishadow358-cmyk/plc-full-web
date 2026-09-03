@@ -1,118 +1,80 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  /* ── Design tokens from Figma ─────────────────────────────── */
-  --bg-base: #050d1a;
-  --bg-panel: #0f172a;
-  --bg-card: #1e293b;
-  --bg-editor: #162032;
-  --border: #1e3a5f;
-
-  --cyan: #06b6d4;
-  --green: #10b981;
-  --purple: #a855f7;
-  --blue-glow: #0ea5e9;
-
-  --text-primary: #f0f9ff;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-
-  /* ── Font families (vars injected by next/font) ───────────── */
-  --font-brand: "Segoe UI", "Trebuchet MS", "Arial Narrow", system-ui, sans-serif;
-  --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  --font-mono: "Consolas", "Cascadia Mono", "Fira Code", monospace;
-
-  /* ── Legacy aliases (kept so existing component vars resolve) */
-  --background: var(--bg-panel);
-  --foreground: var(--text-primary);
-  --panel-bg: var(--bg-card);
-  --border-color: var(--border);
-  --accent-cyan: var(--cyan);
+  --background: #0a0f24;
+  --foreground: #e2e8f0;
+  --panel-bg: #0f172a;
+  --card-bg: #111a33;
+  --border-color: #1e293b;
+  --accent-cyan: #2dd4bf;
+  --accent-amber: #f5a623;
+  --accent-red: #f26b6b;
+  --accent-green: #10b981;
 }
 
-:root[data-theme='light'] {
-  --bg-base: #eef2f6;
-  --bg-panel: #ffffff;
-  --bg-card: #f8fafc;
-  --bg-editor: #f1f5f9;
-  --border: #cbd5e1;
-
-  --cyan: #0284c7;
-  --green: #059669;
-  --purple: #7e22ce;
-  --blue-glow: #0ea5e9;
-
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-}
-
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
+  background-color: #0a0f24;
+  color: #e2e8f0;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Cursor blink (Output Console) ───────────────────────────── */
-@keyframes blink {
+/* Monospace font for all code, addresses, and instruction lists */
+code, pre, .font-mono, [data-font="mono"] {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
 
-  0%,
-  100% {
-    opacity: 1;
-  }
+/* Blueprint Grid Canvas Background */
+.blueprint-grid {
+  background-color: #080d1e;
+  background-image: 
+    linear-gradient(rgba(45, 212, 191, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 212, 191, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(56, 189, 248, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+  background-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px;
+}
 
-  50% {
+/* Staggered Rung Fade-In Animation */
+@keyframes fadeInUp {
+  from {
     opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.cursor-blink {
-  animation: blink 1s step-end infinite;
-}
-
-/* ── Thin scrollbar ───────────────────────────────────────────── */
+/* Custom Scrollbar for Industrial IDE feel */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
 }
-
 ::-webkit-scrollbar-track {
-  background: var(--bg-panel);
+  background: #0a0f24;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #1e293b;
+  border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* ── Textarea reset ───────────────────────────────────────────── */
-textarea {
-  font-family: var(--font-mono);
-  caret-color: var(--cyan);
-  outline: none;
-  resize: none;
-}
-
-textarea::placeholder {
-  color: transparent;
-}
-
-/* ── Remove Ant Design's default button focus ring ──────────── */
-button:focus-visible {
-  outline: 1px solid var(--border);
-  outline-offset: 2px;
+  background: #334155;
 }
