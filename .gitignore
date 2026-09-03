@@ -20,3 +20,8 @@ scratch/
 .DS_Store
 .vscode
 .claude
+
+# environment & secrets
+.env
+.env.*
+!.env.example
