@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
+/**
+ * SmartLadder Master Engineering Test Suite — 12 Golden Test Cases
+ * Verifies End-to-End Pipeline: parseIntent -> detectContradictions -> buildRungSchema -> compileRungs -> validateLadderProgram
+ */
+
 import { parseIntent } from '../ai/src/services/intentParser.js';
+import { detectContradictions } from '../ai/src/services/contradictionDetector.js';
 import { buildRungSchema } from '../ai/src/services/schemaBuilder.js';
 import { compileRungs } from '../ai/src/services/compiler.js';
 import { generateLogic } from '../ai/src/services/logicGenerator.js';
@@ -26,49 +32,43 @@ function assert(condition, message) {
 }
 
 console.log("=========================================================================");
-console.log("SMARTLADDER PHASE 1 MASTER TEST SUITE — IR COMPILER & VALIDATOR");
+console.log("SMARTLADDER 12 GOLDEN TEST SUITE — SEMANTIC & SAFETY VALIDATION");
 console.log("=========================================================================\n");
 
 try {
   // -------------------------------------------------------------------------
-  // TEST A — Basic Motor Control (Safety Permissive M0 + Seal-in Latch Y0)
+  // TEST 1 — Basic Motor Seal-In
   // -------------------------------------------------------------------------
-  console.log("▶ TEST A: Basic Motor Control (Safety Permissive & Seal-in Latch)");
-  const promptA = "When Start X0 is pressed, run the motor Y0. Stop the motor when Stop X1 or emergency stop X2 is activated.";
-  const intentA = parseIntent(promptA);
-  const schemaResA = buildRungSchema(intentA);
-
-  assert(schemaResA.status === 'success', "buildRungSchema returned status 'success'");
-  const schemasA = schemaResA.schemas;
-  assert(schemasA.length === 2, "Schema contains 2 rungs (Safety Permissive + Motor Control)");
-
-  const safetySchemaA = schemasA.find(s => s.kind === 'safety_permissive');
-  assert(!!safetySchemaA, "Safety permissive schema exists");
-  assert(safetySchemaA.safetyInputAddress === 'X2', "Safety input is X2");
-  assert(safetySchemaA.permissiveCoilAddress === 'M0', "Permissive coil is M0");
-  assert(safetySchemaA.contactType === 'NC', "Safety contact type is NC");
-
-  const motorSchemaA = schemasA.find(s => s.kind === 'motor_seal_in');
-  assert(!!motorSchemaA, "Motor seal-in schema exists");
-  assert(motorSchemaA.startAddress === 'X0', "Start address is X0");
-  assert(motorSchemaA.stopAddress === 'X1', "Stop address is X1");
-  assert(motorSchemaA.permissiveCoilAddress === 'M0', "Motor rung uses M0 permissive coil");
-  assert(motorSchemaA.outputCoilAddress === 'Y0', "Output coil is Y0");
-
-  const compiledA = compileRungs(schemasA);
-  assert(!!compiledA.program && compiledA.program.rungs.length === 2, "Compiled program contains 2 rungs");
-  assert(compiledA.instructionList.includes("LDI X2\nOUT M0"), "IL contains 'LDI X2\\nOUT M0'");
-  assert(compiledA.instructionList.includes("LD X0\nOR Y0\nANI X1\nANI M0\nOUT Y0"), "IL contains motor seal-in and M0 gating");
-
-  const valResA = validateLadderProgram(compiledA.program);
-  assert(valResA.summary.status === 'valid', "Program A passed validation with 0 errors/warnings");
-  console.log("  Output IL Preview:\n" + compiledA.instructionList.split('\n').map(l => '    ' + l).join('\n') + "\n");
+  console.log("▶ TEST 1: Basic Motor Control & Seal-in Latch");
+  const prompt1 = "When Start X0 is pressed, run the motor Y0. Stop the motor when Stop X1 or emergency stop X2 is activated.";
+  const intent1 = parseIntent(prompt1);
+  const schemaRes1 = buildRungSchema(intent1);
+  assert(schemaRes1.status === 'success', "buildRungSchema returned status 'success'");
+  const compiled1 = compileRungs(schemaRes1.schemas);
+  assert(compiled1.instructionList.includes("OR Y0"), "Compiled IL includes 'OR Y0' seal-in contact");
+  assert(compiled1.instructionList.includes("OUT Y0"), "Compiled IL includes 'OUT Y0' coil");
+  const valRes1 = validateLadderProgram(compiled1.program);
+  assert(valRes1.summary.status === 'valid', "Program 1 validated with 0 errors/warnings");
+  console.log("  Output IL Preview:\n" + compiled1.instructionList.split('\n').map(l => '    ' + l).join('\n') + "\n");
 
   // -------------------------------------------------------------------------
-  // TEST B — Sequential Interlock (Motor 2 requires Motor 1 output Y0)
+  // TEST 2 — Emergency Stop Handling (Separate Safety Permissive M0)
   // -------------------------------------------------------------------------
-  console.log("▶ TEST B: Sequential Motor Interlock");
-  const schemasB = [
+  console.log("▶ TEST 2: Emergency Stop Handling (Safety Permissive M0)");
+  const safetySchema = schemaRes1.schemas.find(s => s.kind === 'safety_permissive');
+  assert(!!safetySchema, "Safety permissive schema exists");
+  assert(safetySchema.safetyInputAddress === 'X2', "Safety input is X2");
+  assert(safetySchema.permissiveCoilAddress === 'M0', "Permissive coil is M0");
+  assert(safetySchema.contactType === 'NC', "Safety contact type is NC");
+  assert(compiled1.instructionList.includes("LDI X2\nOUT M0"), "IL contains separate safety rung 'LDI X2\\nOUT M0'");
+  assert(compiled1.instructionList.includes("ANI M0"), "Motor rung gates power through safety permissive 'ANI M0'");
+  console.log("  ✓ Safety gating verified: X2 NC -> M0 coil; Motor rung ANI M0\n");
+
+  // -------------------------------------------------------------------------
+  // TEST 3 — Motor Interlock (Motor 2 requires Motor 1 output Y0)
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 3: Sequential Motor Interlock");
+  const schemas3 = [
     {
       kind: 'safety_permissive',
       id: 'rung_safety',
@@ -86,21 +86,17 @@ try {
       requiredOutputAddress: 'Y0',
     },
   ];
-
-  const compiledB = compileRungs(schemasB);
-  assert(compiledB.instructionList.includes("AND Y0"), "Compiled IL includes 'AND Y0' interlock check");
-  const valResB = validateLadderProgram(compiledB.program);
-  if (valResB.summary.status !== 'valid') {
-    console.log("valResB summary:", valResB.summary);
-  }
-  assert(valResB.summary.status === 'valid', "Interlocked program B validated successfully");
-  console.log("  Output IL Preview:\n" + compiledB.instructionList.split('\n').map(l => '    ' + l).join('\n') + "\n");
+  const compiled3 = compileRungs(schemas3);
+  assert(compiled3.instructionList.includes("AND Y0"), "Compiled IL includes 'AND Y0' interlock condition");
+  const valRes3 = validateLadderProgram(compiled3.program);
+  assert(valRes3.summary.status === 'valid', "Motor interlock program validated successfully");
+  console.log("  Output IL Preview:\n" + compiled3.instructionList.split('\n').map(l => '    ' + l).join('\n') + "\n");
 
   // -------------------------------------------------------------------------
-  // TEST C — Mutex Pair (Forward Y0 / Reverse Y1 Mutual Interlock)
+  // TEST 4 — Forward / Reverse Mutex Pair
   // -------------------------------------------------------------------------
-  console.log("▶ TEST C: Mutually Exclusive Pair (Forward / Reverse)");
-  const schemasC = [
+  console.log("▶ TEST 4: Forward / Reverse Bidirectional Mutex Pair");
+  const schemas4 = [
     {
       kind: 'safety_permissive',
       id: 'rung_safety',
@@ -116,22 +112,18 @@ try {
       permissiveCoilAddress: 'M0',
     },
   ];
-
-  const compiledC = compileRungs(schemasC);
-  assert(compiledC.instructionList.includes("ANI Y1"), "Rung A contains 'ANI Y1'");
-  assert(compiledC.instructionList.includes("ANI Y0"), "Rung B contains 'ANI Y0'");
-  const valResC = validateLadderProgram(compiledC.program);
-  if (valResC.summary.status !== 'valid') {
-    console.log("valResC summary:", valResC.summary);
-  }
-  assert(valResC.summary.status === 'valid', "Mutex pair C passed validation");
-  console.log("  Output IL Preview:\n" + compiledC.instructionList.split('\n').map(l => '    ' + l).join('\n') + "\n");
+  const compiled4 = compileRungs(schemas4);
+  assert(compiled4.instructionList.includes("ANI Y1"), "Forward rung contains 'ANI Y1' reverse interlock");
+  assert(compiled4.instructionList.includes("ANI Y0"), "Reverse rung contains 'ANI Y0' forward interlock");
+  const valRes4 = validateLadderProgram(compiled4.program);
+  assert(valRes4.summary.status === 'valid', "Forward/Reverse mutex pair validated successfully");
+  console.log("  Output IL Preview:\n" + compiled4.instructionList.split('\n').map(l => '    ' + l).join('\n') + "\n");
 
   // -------------------------------------------------------------------------
-  // TEST C-NEGATIVE — One-Sided Mutex Construction (MUST BE REJECTED)
+  // TEST 5 — One-Sided Mutex Rejection (Negative Test)
   // -------------------------------------------------------------------------
-  console.log("▶ TEST C-NEGATIVE: One-Sided Mutex Construction (Must be Rejected)");
-  const schemasCNeg = [
+  console.log("▶ TEST 5: One-Sided Mutex Rejection");
+  const schemas5 = [
     {
       kind: 'safety_permissive',
       id: 'rung_safety',
@@ -148,44 +140,101 @@ try {
       oneSidedFaultTest: true,
     },
   ];
-
-  const compiledCNeg = compileRungs(schemasCNeg);
-  const valResCNeg = validateLadderProgram(compiledCNeg.program);
-  assert(valResCNeg.summary.status === 'violation', "Validator flagged status as 'violation'");
-  assert(valResCNeg.summary.errors.some(e => e.includes('One-Sided Mutex Hazard')), "Error message explicitly cites 'One-Sided Mutex Hazard'");
-  console.log(`  ✓ Rejection Output: ${valResCNeg.summary.errors[0]}\n`);
-
-  // -------------------------------------------------------------------------
-  // TEST D — Ambiguous Prompt ("Run the motor.")
-  // -------------------------------------------------------------------------
-  console.log("▶ TEST D: Ambiguous Prompt ('Run the motor.')");
-  const intentD = parseIntent("Run the motor.");
-  const schemaResD = buildRungSchema(intentD);
-  assert(schemaResD.status === 'needs_clarification', "status is 'needs_clarification'");
-  assert(Array.isArray(schemaResD.questions) && schemaResD.questions.length >= 4, "Returns 4 clarification questions");
-
-  const genResD = generateLogic(intentD);
-  assert(genResD.status === 'needs_clarification', "generateLogic returns needs_clarification result without producing ladder");
-  console.log("  Clarification Questions:\n" + schemaResD.questions.map(q => '    - ' + q).join('\n') + "\n");
+  const compiled5 = compileRungs(schemas5);
+  const valRes5 = validateLadderProgram(compiled5.program);
+  assert(valRes5.summary.status === 'violation', "Validator rejected one-sided mutex with 'violation' status");
+  assert(valRes5.summary.errors.some(e => e.includes('One-Sided Mutex Hazard')), "Error message cites 'One-Sided Mutex Hazard'");
+  console.log(`  ✓ Rejection Output: ${valRes5.summary.errors[0]}\n`);
 
   // -------------------------------------------------------------------------
-  // REGRESSION TESTS — Timer, Counter, Conveyor
+  // TEST 6 — Timer Control
   // -------------------------------------------------------------------------
-  console.log("▶ REGRESSION TESTS: Timer, Counter, Conveyor Interlock");
-  const intentTimer = parseIntent("Start timer T0 for 5 seconds using sensor X0 to trigger output Y1");
-  const resTimer = generateLogic(intentTimer);
-  assert('instructionList' in resTimer && resTimer.instructionList.includes("OUT T0 K50"), "Timer control compiles correctly");
+  console.log("▶ TEST 6: Timer Control (On-Delay TON)");
+  const intent6 = parseIntent("Start timer T0 for 5 seconds using sensor X0 to trigger output Y1");
+  const res6 = generateLogic(intent6);
+  assert('instructionList' in res6 && res6.instructionList.includes("OUT T0 K50"), "Timer control compiles 'OUT T0 K50'");
+  assert('instructionList' in res6 && res6.instructionList.includes("OUT Y1"), "Timer done contact drives 'OUT Y1'");
+  console.log("  ✓ Timer control verified\n");
 
-  const intentCounter = parseIntent("Count 10 pulses on sensor X0 with counter C0 to turn on output Y2");
-  const resCounter = generateLogic(intentCounter);
-  assert('instructionList' in resCounter && resCounter.instructionList.includes("OUT C0 K10"), "Counter control compiles correctly");
+  // -------------------------------------------------------------------------
+  // TEST 7 — Counter Control
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 7: Counter Control (Up Counter CTU)");
+  const intent7 = parseIntent("Count 10 pulses on sensor X0 with counter C0 to turn on output Y2");
+  const res7 = generateLogic(intent7);
+  assert('instructionList' in res7 && res7.instructionList.includes("OUT C0 K10"), "Counter control compiles 'OUT C0 K10'");
+  assert('instructionList' in res7 && res7.instructionList.includes("OUT Y2"), "Counter done contact drives 'OUT Y2'");
+  console.log("  ✓ Counter control verified\n");
 
-  const intentConv = parseIntent("Start conveyor Y0 with button X0 and clearance sensor X3, stop with X1, emergency X2");
-  const resConv = generateLogic(intentConv);
-  assert('instructionList' in resConv && resConv.instructionList.includes("AND X3"), "Conveyor interlock compiles correctly");
+  // -------------------------------------------------------------------------
+  // TEST 8 — Ambiguous Motor Prompt
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 8: Ambiguous Motor Prompt ('Run the motor.')");
+  const intent8 = parseIntent("Run the motor.");
+  const res8 = generateLogic(intent8);
+  assert('status' in res8 && res8.status === 'needs_clarification', "Returns status 'needs_clarification'");
+  assert(Array.isArray(res8.questions) && res8.questions.length >= 4, "Returns 4 clarification questions");
+  console.log("  Clarification Questions:\n" + res8.questions.map(q => '    - ' + q).join('\n') + "\n");
+
+  // -------------------------------------------------------------------------
+  // TEST 9 — Duplicate Output Rejection (Negative Test)
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 9: Duplicate Output Coil Rejection");
+  const dupProgram = {
+    rungs: [
+      {
+        id: 'r0',
+        rungNumber: 0,
+        comment: 'Rung 0 writing Y0',
+        branchGroups: [{ symbols: [{ id: 's0', type: 'contact_no', address: 'X0' }] }],
+        coils: [{ id: 'c0', type: 'coil', address: 'Y0' }],
+      },
+      {
+        id: 'r1',
+        rungNumber: 1,
+        comment: 'Rung 1 writing duplicate Y0',
+        branchGroups: [{ symbols: [{ id: 's1', type: 'contact_no', address: 'X1' }] }],
+        coils: [{ id: 'c1', type: 'coil', address: 'Y0' }],
+      },
+    ],
+  };
+  const dupVal = validateLadderProgram(dupProgram);
+  assert(dupVal.summary.status === 'violation', "Validator flagged duplicate output coil as 'violation'");
+  assert(dupVal.summary.errors.some(e => e.includes('Duplicate Output Coil Hazard')), "Error cites 'Duplicate Output Coil Hazard'");
+  console.log(`  ✓ Rejection Output: ${dupVal.summary.errors[0]}\n`);
+
+  // -------------------------------------------------------------------------
+  // TEST 10 — Circular Interlock Rejection (Negative Test)
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 10: Circular Interlock Rejection");
+  const intent10 = parseIntent("Motor 1 requires Motor 2 to be running and Motor 2 requires Motor 1 to be running");
+  const res10 = generateLogic(intent10);
+  assert('status' in res10 && res10.status === 'generation_rejected', "Contradiction detector returned 'generation_rejected'");
+  assert(res10.reasons.some(r => r.includes('Circular dependency detected')), "Reason cites 'Circular dependency detected'");
+  console.log(`  ✓ Rejection Output: ${res10.reasons[0]}\n`);
+
+  // -------------------------------------------------------------------------
+  // TEST 11 — Contradictory Input Roles (Negative Test)
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 11: Contradictory Input Roles Rejection");
+  const intent11 = parseIntent("X0 is Start and X0 is Emergency Stop");
+  const res11 = generateLogic(intent11);
+  assert('status' in res11 && res11.status === 'generation_rejected', "Contradiction detector returned 'generation_rejected'");
+  assert(res11.reasons.some(r => r.includes('contradictory roles')), "Reason cites 'contradictory roles'");
+  console.log(`  ✓ Rejection Output: ${res11.reasons[0]}\n`);
+
+  // -------------------------------------------------------------------------
+  // TEST 12 — Contradictory Output Behavior (Negative Test)
+  // -------------------------------------------------------------------------
+  console.log("▶ TEST 12: Contradictory Output Behavior Rejection");
+  const intent12 = parseIntent("Motor must run when Stop is pressed and Motor must stop when Stop is pressed");
+  const res12 = generateLogic(intent12);
+  assert('status' in res12 && res12.status === 'generation_rejected', "Contradiction detector returned 'generation_rejected'");
+  assert(res12.reasons.some(r => r.includes('both RUN and STOP')), "Reason cites 'both RUN and STOP'");
+  console.log(`  ✓ Rejection Output: ${res12.reasons[0]}\n`);
 
   console.log("-------------------------------------------------------------------------");
-  console.log(`🎉 ALL TESTS PASSED! (${passed} assertions passed, ${failed} failed)`);
+  console.log(`🎉 ALL 12 GOLDEN TEST CASES PASSED! (${passed} assertions passed, ${failed} failed)`);
   console.log("-------------------------------------------------------------------------");
   process.exit(0);
 

@@ -1,7 +1,8 @@
 import { ParsedIntent } from './intentParser';
+import { detectContradictions } from './contradictionDetector';
 import { buildRungSchema } from './schemaBuilder';
 import { compileRungs } from './compiler';
-import { ClarificationResult } from '../types/ir';
+import { ClarificationResult, GenerationRejectedResult } from '../types/ir';
 
 export interface LadderBlock {
   type: 'contact' | 'contact_nc' | 'coil';
@@ -46,20 +47,32 @@ export interface LogicGenerationResult {
 
 /**
  * Logic Generator Migration: Orchestrates structured data flow.
- * NL -> parseIntent() -> ParsedIntent -> buildRungSchema() -> RungSchema[] -> compileRungs() -> LogicGenerationResult
+ * NL -> parseIntent() -> detectContradictions() -> buildRungSchema() -> RungSchema[] -> compileRungs() -> LogicGenerationResult
  * Zero string templates constructed here.
  */
-export function generateLogic(intent: ParsedIntent): LogicGenerationResult | ClarificationResult {
+export function generateLogic(
+  intent: ParsedIntent
+): LogicGenerationResult | ClarificationResult | GenerationRejectedResult {
   if (!intent || !intent.type) {
     throw new Error('Invalid intent object provided to generateLogic.');
   }
 
-  // Step 1: Build structured IR RungSchema[] or return ClarificationResult
+  // Step 1: Detect Contradictions prior to IR compilation
+  const contradictionResult = detectContradictions(intent);
+  if (contradictionResult.hasContradiction) {
+    return {
+      status: 'generation_rejected',
+      reasons: contradictionResult.issues.map((i) => i.message),
+      providedPrompt: intent.rawPrompt,
+    };
+  }
+
+  // Step 2: Build structured IR RungSchema[] or return ClarificationResult
   const schemaResult = buildRungSchema(intent);
   if (schemaResult.status === 'needs_clarification') {
     return schemaResult;
   }
 
-  // Step 2: Compile RungSchema[] into LogicGenerationResult via pure compiler
+  // Step 3: Compile RungSchema[] into LogicGenerationResult via pure compiler
   return compileRungs(schemaResult.schemas);
 }

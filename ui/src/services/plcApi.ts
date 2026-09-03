@@ -2,8 +2,9 @@ import { parseIntent, ParsedIntent } from '../../../ai/src/services/intentParser
 import { generateLogic } from '../../../ai/src/services/logicGenerator';
 
 export interface LogicGenerationResult {
-  status?: 'needs_clarification';
+  status?: 'needs_clarification' | 'generation_rejected';
   questions?: string[];
+  reasons?: string[];
   ladder?: Array<{ type: 'contact' | 'contact_nc' | 'coil'; label: string }>;
   program?: any;
   explanation: string;
@@ -12,8 +13,8 @@ export interface LogicGenerationResult {
 }
 
 /**
- * End-to-end PLC logic generation service using IR Compiler architecture.
- * Flow: User NL prompt → parseIntent() → buildRungSchema() → compileRungs() → Ladder JSON
+ * End-to-end PLC logic generation service using IR Compiler & Contradiction Detection architecture.
+ * Flow: User NL prompt → parseIntent() → detectContradictions() → buildRungSchema() → compileRungs() → Ladder JSON
  */
 export const generatePlcLogic = async (input: string): Promise<LogicGenerationResult> => {
   const trimmed = input.trim();
@@ -25,6 +26,18 @@ export const generatePlcLogic = async (input: string): Promise<LogicGenerationRe
 
   const intent: ParsedIntent = parseIntent(trimmed);
   const aiResult = generateLogic(intent);
+
+  if ('status' in aiResult && aiResult.status === 'generation_rejected') {
+    return {
+      status: 'generation_rejected',
+      reasons: aiResult.reasons,
+      explanation: `### Generation Rejected (Contradiction Detected)\n\nThe requested PLC logic contains safety or operational contradictions:\n\n` +
+        aiResult.reasons.map((r) => `- ❌ ${r}`).join('\n') +
+        `\n\nCompilation aborted to protect equipment and operator safety.`,
+      instructionList: '; Compilation rejected due to detected contradiction.\n; No ladder produced.',
+      warnings: aiResult.reasons,
+    };
+  }
 
   if ('status' in aiResult && aiResult.status === 'needs_clarification') {
     return {

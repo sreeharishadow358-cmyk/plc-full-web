@@ -5,12 +5,11 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "rootDir": "./src",
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "noEmit": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../ai/src/**/*.ts"]
 }

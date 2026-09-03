@@ -2,9 +2,13 @@
   "name": "plc-frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "npm --prefix ui run dev",
     "build": "npm --prefix ui run build",
-    "start": "npm --prefix ui run start"
+    "start": "npm --prefix ui run start",
+    "test": "node scripts/testPipeline.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ui/tsconfig.json",
+    "lint": "npm --prefix ui run lint"
   }
 }
